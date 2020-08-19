@@ -31,11 +31,7 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage>
-    with SingleTickerProviderStateMixin {
-  AnimationController _animationController;
-  double _transitionPercent;
-
+class _MyHomePageState extends State<MyHomePage> {
   final firestoreInstance = Firestore.instance;
   static String googleRed = "#EA4335";
   static String googleGreen = "#34A853";
@@ -53,16 +49,19 @@ class _MyHomePageState extends State<MyHomePage>
 
   List<int> runAnimations;
 
-  DateTimeSelector chosenDatetime;
-  PostTitle postTitle;
-  PostDescription postDescription;
+  Widget chosenDatetime;
+  Widget postTitle;
+  Widget postDescription;
   // Widget doneButton;
 
   List<Widget> allWidgets;
   List<Widget> _children;
+  DateTime _now;
 
-  int focusedWidget;
-  int tappedWidget;
+  TextEditingController _postTitleController;
+  TextEditingController _postDescriptionController;
+
+  final _formKey = GlobalKey<FormState>();
 
   List<TextSpan> _googleizeName(name) {
     List<TextSpan> inputLetters = [];
@@ -98,8 +97,9 @@ class _MyHomePageState extends State<MyHomePage>
   // Initializer
   @override
   void initState() {
-    focusedWidget = null;
-
+    _now = DateTime.now();
+    _postTitleController = TextEditingController();
+    _postDescriptionController = TextEditingController();
     googleName = RichText(
       // textAlign: TextAlign.end,
       text: TextSpan(
@@ -110,26 +110,6 @@ class _MyHomePageState extends State<MyHomePage>
       ),
     );
 
-    _transitionPercent = 0;
-    runAnimations = [0, 0, 0];
-
-    chosenDatetime = DateTimeSelector(
-      callFieldDispersion: _callFieldDispersion,
-      doneWithEdit: doneWithEdit,
-    );
-
-    postTitle = PostTitle(
-      callFieldDispersion: _callFieldDispersion,
-      doneWithEdit: doneWithEdit,
-    );
-
-    postDescription = PostDescription(
-      callFieldDispersion: _callFieldDispersion,
-      doneWithEdit: doneWithEdit,
-    );
-
-    allWidgets = [chosenDatetime, postTitle, postDescription];
-
     super.initState();
   }
 
@@ -138,62 +118,27 @@ class _MyHomePageState extends State<MyHomePage>
     super.dispose();
   }
 
-  doneWithEdit() {
-    focusedWidget = null;
-    setState(() {
-      focusedWidget = null;
-    });
-    runAnimations = List<int>.generate(runAnimations.length, (i) => 0);
-  }
+  validateSubmit() {
+    bool submitValid = false;
 
-  _callFieldDispersion(indexOfFocused) async {
-    tappedWidget = indexOfFocused;
-    runAnimations = List<int>.generate(runAnimations.length,
-        (i) => (i == indexOfFocused) ? 0 : (i < indexOfFocused) ? 1 : 2);
-    // chosenDatetime.
-    for (int index = 0; index < runAnimations.length; index++) {
-      // Animate the DateTimeSelector widget
-      if (index == 0) {
-        if (runAnimations[index] == 0) {
-          // do nothing
-        } else if (runAnimations[index] == 1) {
-          DateTimeSelector.globalKey.currentState.animateUp();
-          // do nothing
-        } else if (runAnimations[index] == 2) {
-          DateTimeSelector.globalKey.currentState.animateDown();
-          // do nothing
-        }
-      }
-
-      // Animate the Post Title Widget
-      else if (index == 1) {
-        if (runAnimations[index] == 0) {
-          // do nothing
-        } else if (runAnimations[index] == 1) {
-          PostTitle.globalKey.currentState.animateUp();
-        } else if (runAnimations[index] == 2) {
-          PostTitle.globalKey.currentState.animateDown();
-        }
-      }
-
-      // Animate the Post Description Widget
-      else if (index == 2) {
-        if (runAnimations[index] == 0) {
-          // do nothing
-        } else if (runAnimations[index] == 1) {
-          PostDescription.globalKey.currentState.animateUp();
-        } else if (runAnimations[index] == 2) {
-          PostDescription.globalKey.currentState.animateDown();
-        }
-      }
-    }
-    int waitTime = (animationTime / 5).round();
-    await new Future.delayed(Duration(milliseconds: waitTime));
-    focusedWidget = tappedWidget;
-    if (focusedWidget == null) {
-      _children = allWidgets;
+    if (_postTitleController.text == "") {
+      submitValid = false;
     } else {
-      _children = [allWidgets[focusedWidget]];
+      submitValid = true;
+    }
+
+    if (_postDescriptionController.text == "") {
+      submitValid = false;
+    } else {
+      submitValid = true;
+    }
+    if (submitValid == true) {
+      Map<String, dynamic> submitData = {
+        "date": _now,
+        "description": _postDescriptionController.text,
+        "title": _postTitleController.text,
+      };
+      print(submitData);
     }
   }
 
@@ -203,14 +148,154 @@ class _MyHomePageState extends State<MyHomePage>
     double height = MediaQuery.of(context).size.height;
     double searchbarWidth = width * .95; // width of search bar minus icons
 
-    if (focusedWidget == null) {
-      _children = allWidgets;
-    } else {
-      _children = [allWidgets[focusedWidget]];
-    }
-    print("CHILDREN");
-    print(_children);
-    print(focusedWidget);
+    postTitle = Container(
+      height: searchBarHeight +
+          2 * searchBarPadding, //Actually 46 on Googles Search page
+      padding: EdgeInsets.fromLTRB(0, searchBarPadding, 0, searchBarPadding),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Container(
+            width: searchbarWidth,
+            height: searchBarHeight,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(searchBarHeight / 2),
+              border: Border.all(
+                color: Hexcolor(googleSearchBorderColor),
+                width: 1,
+              ),
+              color: Hexcolor(googleWhite),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.fromLTRB(14, 0, 14, 0),
+                ),
+                Container(
+                  width: searchbarWidth - 60,
+                  child: TextField(
+                    controller: _postTitleController,
+                    onTap: () {},
+                    cursorColor: Colors.black,
+                    cursorWidth: 1,
+                    enableSuggestions: false,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: googleSearchFont,
+                    ),
+                    onChanged: (text) {},
+                    decoration: InputDecoration(
+                      hintText: "Title of Post",
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    postDescription = Container(
+      height: searchBarHeight +
+          2 * searchBarPadding, //Actually 46 on Googles Search page
+      padding: EdgeInsets.fromLTRB(0, searchBarPadding, 0, searchBarPadding),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Container(
+            width: searchbarWidth,
+            height: searchBarHeight,
+            // foregroundDecoration: BoxDecoration(
+            // color: Colors.white,
+            // ),
+            // Search Bar Searchbar
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(searchBarHeight / 2),
+              border: Border.all(
+                color: Hexcolor(googleSearchBorderColor),
+                width: 1,
+              ),
+              color: Hexcolor(googleWhite),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Container(
+                  padding: EdgeInsets.fromLTRB(14, 0, 14, 0),
+                  // color: Colors.red,
+                ),
+                Container(
+                  width: searchbarWidth - 60,
+                  child: TextField(
+                    controller: _postDescriptionController,
+                    cursorColor: Colors.black,
+                    cursorWidth: 1,
+                    enableSuggestions: false,
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.black,
+                      fontFamily: googleSearchFont,
+                    ),
+                    onChanged: (text) {},
+                    decoration: InputDecoration(
+                      hintText: "Description of Post",
+                      focusedBorder: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      errorBorder: InputBorder.none,
+                      disabledBorder: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+
+    chosenDatetime = Container(
+      height: height * .1,
+      child: CupertinoDatePicker(
+        // mode:CupertinoDatePickerMode.date,
+        initialDateTime: _now,
+        onDateTimeChanged: (date) {
+          setState(() {
+            _now = date;
+          });
+        },
+      ),
+    );
+
+    Widget submitButton = FlatButton(
+      onPressed: () {
+        validateSubmit();
+      },
+      child: Container(
+        width: 100,
+        height: searchBarHeight,
+        // foregroundDecoration: BoxDecoration(
+        // color: Colors.white,
+        // ),
+        // Search Bar Searchbar
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(searchBarHeight / 2),
+          border: Border.all(
+            color: Hexcolor(googleSearchBorderColor),
+            width: 1,
+          ),
+          color: Hexcolor(googleWhite),
+        ),
+        alignment: Alignment.center,
+        child: Text("Submit"),
+      ),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -222,9 +307,12 @@ class _MyHomePageState extends State<MyHomePage>
           height: 50,
         ),
       ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: _children,
+      body: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [chosenDatetime, postTitle, postDescription, submitButton],
+        ),
       ),
     );
   }

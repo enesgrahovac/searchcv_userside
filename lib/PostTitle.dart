@@ -8,17 +8,10 @@ class PostTitle extends StatefulWidget {
   static final GlobalKey<_PostTitleState> globalKey =
       GlobalKey<_PostTitleState>();
 
-  PostTitle({
-    @required callFieldDispersion,
-    @required doneWithEdit,
-  })  : _callFieldDispersion = callFieldDispersion,
-        doneWithEdit = doneWithEdit,
+  PostTitle()  : 
         super(key: globalKey);
 
-  final Function _callFieldDispersion;
-  final Function doneWithEdit;
 
-  // super(key:_postTitleKey);
 
   @override
   _PostTitleState createState() => _PostTitleState();
@@ -38,94 +31,25 @@ class _PostTitleState extends State<PostTitle>
   @override
   void initState() {
     _textController = TextEditingController();
-    isFocused = false;
-    animationDirection = 0;
-    _animationController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: animationTime),
-    )
-      ..addListener(() {
-        setState(() {
-          _transitionPercent = _animationController.value;
-        });
-      })
-      ..addStatusListener((status) {
-        setState(() {
-          if (status == AnimationStatus.completed) {
-            _animationController.value = 0;
-            _transitionPercent = 0;
-            animationDirection = 0;
-          }
-        });
-      });
-
-    _transitionPercent = 0;
+    
 
     super.initState();
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     super.dispose();
   }
 
-  animateUp() {
-    animationDirection = 1;
-    _animationController.forward();
-  }
-
-  animateDown() {
-    animationDirection = 2;
-    _animationController.forward();
-  }
-
-  animateBack() {
-    _animationController.reverse();
-  }
-
-  callDispersion() async {
-    widget._callFieldDispersion(1);
-    int waitTime = (animationTime / 5).round();
-    await new Future.delayed(Duration(milliseconds: waitTime));
-    setState(() {
-      isFocused = true;
-    });
-  }
-
-  doneWithEdit() {
-    setState(() {
-      print(_textController.value);
-      isFocused = false;
-      FocusScope.of(context).unfocus();
-      widget.doneWithEdit();
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
     double width = MediaQuery.of(context).size.width;
     double height = MediaQuery.of(context).size.height;
     double searchbarWidth = width * .95; // width of search bar minus icons
-    // Calculate the position of the onboarding content
-    final double maxOffset = width / 1;
+    
 
-    double offsetPercent = 1;
-
-    offsetPercent = -_transitionPercent / 0.25;
-
-    double contentOffset = offsetPercent * maxOffset;
-    final double contentScale = 0.6 + (0.4 * (1.0 - offsetPercent.abs()));
-
-    if (animationDirection == 2) {
-      contentOffset = contentOffset * -1;
-    }
-
-    inputBar = Transform(
-      transform: Matrix4.translationValues(0, contentOffset, 0),
-      // ..scale(contentScale, contentScale),
-      alignment: Alignment.center,
-      child: Container(
+    inputBar = Container(
         height: searchBarHeight +
             2 * searchBarPadding, //Actually 46 on Googles Search page
         padding: EdgeInsets.fromLTRB(0, searchBarPadding, 0, searchBarPadding),
@@ -153,7 +77,6 @@ class _PostTitleState extends State<PostTitle>
                     width: searchbarWidth - 60,
                     child: TextField(
                       onTap: () {
-                        callDispersion();
                       },
                       controller: _textController,
                       cursorColor: Colors.black,
@@ -178,21 +101,9 @@ class _PostTitleState extends State<PostTitle>
             ),
           ],
         ),
-      ),
     );
 
-    Widget doneButton = FlatButton(
-        onPressed: () {
-          doneWithEdit();
-        },
-        child: Text("DONE"));
 
-    if (isFocused) {
-      _children = [inputBar, doneButton];
-    } else {
-      _children = [inputBar];
-    }
-
-    return Column(children: _children);
+    return Column(children: [inputBar]);
   }
 }
