@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hexcolor/hexcolor.dart';
 import 'globals.dart';
+import 'PostTitle.dart';
+import 'DateTimeSelector.dart';
+import 'PostDescription.dart';
 
 void main() {
   runApp(MyApp());
@@ -28,7 +31,11 @@ class MyHomePage extends StatefulWidget {
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
+class _MyHomePageState extends State<MyHomePage>
+    with SingleTickerProviderStateMixin {
+  AnimationController _animationController;
+  double _transitionPercent;
+
   final firestoreInstance = Firestore.instance;
   static String googleRed = "#EA4335";
   static String googleGreen = "#34A853";
@@ -44,7 +51,18 @@ class _MyHomePageState extends State<MyHomePage> {
   ];
   RichText googleName;
 
-  DateTime _now;
+  List<int> runAnimations;
+
+  DateTimeSelector chosenDatetime;
+  PostTitle postTitle;
+  PostDescription postDescription;
+  // Widget doneButton;
+
+  List<Widget> allWidgets;
+  List<Widget> _children;
+
+  int focusedWidget;
+  int tappedWidget;
 
   List<TextSpan> _googleizeName(name) {
     List<TextSpan> inputLetters = [];
@@ -80,7 +98,8 @@ class _MyHomePageState extends State<MyHomePage> {
   // Initializer
   @override
   void initState() {
-    _now = DateTime.now();
+    focusedWidget = null;
+
     googleName = RichText(
       // textAlign: TextAlign.end,
       text: TextSpan(
@@ -91,7 +110,91 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
 
+    _transitionPercent = 0;
+    runAnimations = [0, 0, 0];
+
+    chosenDatetime = DateTimeSelector(
+      callFieldDispersion: _callFieldDispersion,
+      doneWithEdit: doneWithEdit,
+    );
+
+    postTitle = PostTitle(
+      callFieldDispersion: _callFieldDispersion,
+      doneWithEdit: doneWithEdit,
+    );
+
+    postDescription = PostDescription(
+      callFieldDispersion: _callFieldDispersion,
+      doneWithEdit: doneWithEdit,
+    );
+
+    allWidgets = [chosenDatetime, postTitle, postDescription];
+
     super.initState();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
+  doneWithEdit() {
+    focusedWidget = null;
+    setState(() {
+      focusedWidget = null;
+    });
+    runAnimations = List<int>.generate(runAnimations.length, (i) => 0);
+  }
+
+  _callFieldDispersion(indexOfFocused) async {
+    tappedWidget = indexOfFocused;
+    runAnimations = List<int>.generate(runAnimations.length,
+        (i) => (i == indexOfFocused) ? 0 : (i < indexOfFocused) ? 1 : 2);
+    // chosenDatetime.
+    for (int index = 0; index < runAnimations.length; index++) {
+      // Animate the DateTimeSelector widget
+      if (index == 0) {
+        if (runAnimations[index] == 0) {
+          // do nothing
+        } else if (runAnimations[index] == 1) {
+          DateTimeSelector.globalKey.currentState.animateUp();
+          // do nothing
+        } else if (runAnimations[index] == 2) {
+          DateTimeSelector.globalKey.currentState.animateDown();
+          // do nothing
+        }
+      }
+
+      // Animate the Post Title Widget
+      else if (index == 1) {
+        if (runAnimations[index] == 0) {
+          // do nothing
+        } else if (runAnimations[index] == 1) {
+          PostTitle.globalKey.currentState.animateUp();
+        } else if (runAnimations[index] == 2) {
+          PostTitle.globalKey.currentState.animateDown();
+        }
+      }
+
+      // Animate the Post Description Widget
+      else if (index == 2) {
+        if (runAnimations[index] == 0) {
+          // do nothing
+        } else if (runAnimations[index] == 1) {
+          PostDescription.globalKey.currentState.animateUp();
+        } else if (runAnimations[index] == 2) {
+          PostDescription.globalKey.currentState.animateDown();
+        }
+      }
+    }
+    int waitTime = (animationTime / 5).round();
+    await new Future.delayed(Duration(milliseconds: waitTime));
+    focusedWidget = tappedWidget;
+    if (focusedWidget == null) {
+      _children = allWidgets;
+    } else {
+      _children = [allWidgets[focusedWidget]];
+    }
   }
 
   @override
@@ -100,65 +203,14 @@ class _MyHomePageState extends State<MyHomePage> {
     double height = MediaQuery.of(context).size.height;
     double searchbarWidth = width * .95; // width of search bar minus icons
 
-    Container postTitle = Container(
-      height: searchBarHeight +
-          2 * searchBarPadding, //Actually 46 on Googles Search page
-      padding: EdgeInsets.fromLTRB(0, searchBarPadding, 0, searchBarPadding),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.start,
-        children: [
-          Container(
-            width: searchbarWidth,
-            height: searchBarHeight,
-            // foregroundDecoration: BoxDecoration(
-            // color: Colors.white,
-            // ),
-            // Search Bar Searchbar
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(searchBarHeight / 2),
-              border: Border.all(
-                color: Hexcolor(googleSearchBorderColor),
-                width: 1,
-              ),
-              color: Hexcolor(googleWhite),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Container(
-                  padding: EdgeInsets.fromLTRB(14, 0, 14, 0),
-                  // color: Colors.red,
-                ),
-                Container(
-                  width: searchbarWidth - 60,
-                  child: TextField(
-                    // onTap: () {
-                    //   focusSearch();
-                    // },
-                    // controller: searchInputController,
-                    cursorColor: Colors.black,
-                    cursorWidth: 1,
-                    enableSuggestions: false,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontFamily: googleSearchFont,
-                    ),
-                    onChanged: (text) {},
-                    decoration: InputDecoration(
-                      focusedBorder: InputBorder.none,
-                      enabledBorder: InputBorder.none,
-                      errorBorder: InputBorder.none,
-                      disabledBorder: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    if (focusedWidget == null) {
+      _children = allWidgets;
+    } else {
+      _children = [allWidgets[focusedWidget]];
+    }
+    print("CHILDREN");
+    print(_children);
+    print(focusedWidget);
 
     return Scaffold(
       appBar: AppBar(
@@ -172,22 +224,7 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
       body: Column(
         mainAxisAlignment: MainAxisAlignment.center,
-        children: <Widget>[
-          Container(
-            height: height * .1,
-            child: CupertinoDatePicker(
-              initialDateTime: _now,
-              onDateTimeChanged: (date) {
-                setState(() {
-                  _now = date;
-                  print(_now);
-                });
-              },
-            ),
-          ),
-          postTitle,
-          postTitle,
-        ],
+        children: _children,
       ),
     );
   }

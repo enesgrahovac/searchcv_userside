@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+
 String googleWhite = "#fff";
 String firestoreURL =
     "https://firebasestorage.googleapis.com/v0/b/searchme-1.appspot.com/o/";
@@ -12,7 +14,7 @@ double profileBoxWidth = 368;
 double searchBarHeight = 50; // It is actually 46 pixels on google search apge
 
 double searchBarPadding = 20;
-
+const int animationTime = 1500;
 Map imageNames = {
   "unselected_All": "unselected_mag_icon.svg?alt=media",
   "All": "coloredMagGlass.svg?alt=media",
@@ -27,3 +29,11 @@ Map imageNames = {
   "More": "3dots.svg?alt=media",
   "unselected_More": "3dots.svg?alt=media",
 };
+
+// getDoneButton(widget, doneWithEdit){
+//   return FlatButton(
+//         onPressed: () {
+//           doneWithEdit();
+//         },
+//         child: Text("DONE"));
+// }
