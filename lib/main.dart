@@ -6,6 +6,7 @@ import 'globals.dart';
 import 'PostTitle.dart';
 import 'DateTimeSelector.dart';
 import 'PostDescription.dart';
+import 'package:flutter_tags/flutter_tags.dart';
 
 void main() {
   runApp(MyApp());
@@ -58,6 +59,11 @@ class _MyHomePageState extends State<MyHomePage> {
   List<Widget> _children;
   DateTime _now;
 
+  List<String> _tags;
+  List<String> _chosenTags;
+  List<String>
+      _newTags; // list of tags that weren't previously in the database.
+
   TextEditingController _postTitleController;
   TextEditingController _postDescriptionController;
 
@@ -94,9 +100,33 @@ class _MyHomePageState extends State<MyHomePage> {
     return inputLetters;
   }
 
+  // Get previous tags from Firebase CloudStore
+  getTags() async {
+    List returnVal;
+    var res = await firestoreInstance
+        .collection('tags')
+        .getDocuments()
+        .then((value) => {returnVal = value.documents});
+
+    _tags = [];
+    for (var i = 0; i < returnVal.length; i++) {
+      DocumentSnapshot singleDocument = returnVal[i];
+      _tags.add(singleDocument.documentID);
+    }
+    print(_tags);
+
+    setState(() {
+      return;
+    });
+  }
+
   // Initializer
   @override
   void initState() {
+    _tags = [];
+    _chosenTags = [];
+    _newTags = [];
+    getTags();
     _now = DateTime.now();
     _postTitleController = TextEditingController();
     _postDescriptionController = TextEditingController();
@@ -118,6 +148,30 @@ class _MyHomePageState extends State<MyHomePage> {
     super.dispose();
   }
 
+  recordNewTag(documentID) async {
+    for (int i = 0; i < _newTags.length; i++) {
+      var res = await firestoreInstance
+          .collection('tags')
+          .document(_newTags[i])
+          .setData({"posts": documentID});
+    }
+    return;
+  }
+
+  sendPost(Map<String, dynamic> submitData) async {
+    DocumentReference resultValue;
+    var res = await firestoreInstance
+        .collection('posts')
+        .add(submitData)
+        .then((value) => {resultValue = value});
+
+    // Check if this post used a new tag that needs to be
+    // added to the 'tags' collection in Firebase.
+    if (_newTags.length != 0) {
+      recordNewTag(resultValue.documentID);
+    }
+  }
+
   validateSubmit() {
     bool submitValid = false;
 
@@ -132,14 +186,31 @@ class _MyHomePageState extends State<MyHomePage> {
     } else {
       submitValid = true;
     }
+    if (_chosenTags.length == 0) {
+      submitValid = false;
+    } else {
+      submitValid = true;
+    }
     if (submitValid == true) {
       Map<String, dynamic> submitData = {
         "date": _now,
         "description": _postDescriptionController.text,
         "title": _postTitleController.text,
+        "tags": _chosenTags,
       };
-      print(submitData);
+      sendPost(submitData);
+
+      // Clear form data after submit.
+      setState(() {
+        _postDescriptionController.text = "";
+        _postTitleController.text = "";
+        _chosenTags = [];
+      });
     }
+  }
+
+  changeView() {
+    print("change to post view");
   }
 
   @override
@@ -273,6 +344,67 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
 
+    Widget tagSelector = Tags(
+      horizontalScroll: true,
+      // key: _tagStateKey,
+      textField: TagsTextField(
+        textStyle: TextStyle(fontSize: 12.0),
+        constraintSuggestion: false,
+        suggestions: _tags,
+        onSubmitted: (String str) {
+          // Add item to the data source.
+          setState(() {
+            // required
+            _chosenTags.add(str);
+            if (!_tags.contains(str)) {
+              _newTags.add(str);
+            }
+            print("UPDATED TAGS");
+            print(_chosenTags);
+          });
+        },
+      ),
+      itemCount: _chosenTags.length, // required
+      itemBuilder: (int index) {
+        final item = _chosenTags[index];
+
+        return ItemTags(
+          // Each ItemTags must contain a Key. Keys allow Flutter to
+          // uniquely identify widgets.
+          key: Key(index.toString()),
+          index: index, // required
+          title: item,
+          pressEnabled: false,
+          // active: item.active,
+          // customData: item.customData,
+          textStyle: TextStyle(
+            fontSize: 12.0,
+          ),
+          combine: ItemTagsCombine.withTextBefore,
+          // image: ItemTagsImage(
+          //     image: AssetImage(
+          //         "img.jpg") // OR NetworkImage("https://...image.png")
+          //     ),
+          // icon: ItemTagsIcon(
+          //   icon: Icons.add,
+          // ), // OR null,
+          removeButton: ItemTagsRemoveButton(
+            onRemoved: () {
+              // Remove the item from the data source.
+              setState(() {
+                // required
+                _chosenTags.removeAt(index);
+              });
+              //required
+              return true;
+            },
+          ), // OR null,
+          onPressed: (item) => print(item),
+          onLongPressed: (item) => print(item),
+        );
+      },
+    );
+
     Widget submitButton = FlatButton(
       onPressed: () {
         validateSubmit();
@@ -301,17 +433,45 @@ class _MyHomePageState extends State<MyHomePage> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         shadowColor: Colors.transparent,
-        title: Container(
-          child: googleName,
-          width: width,
-          height: 50,
+        title: Row(
+          children: [
+            Container(
+              child: googleName,
+              width: width * .65,
+              height: 50,
+            ),
+            GestureDetector(
+              onTap: () {
+                changeView();
+              },
+              child: Container(
+                  alignment: Alignment.center,
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(50 / 2),
+                    border: Border.all(
+                      color: Hexcolor(googleSearchBorderColor),
+                      width: 1,
+                    ),
+                    color: Hexcolor(googleWhite),
+                  ),
+                  child: Text("Switch View",style:TextStyle(fontSize: 10.0,color: Colors.black,))),
+            )
+          ],
         ),
       ),
       body: Form(
         key: _formKey,
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
-          children: [chosenDatetime, postTitle, postDescription, submitButton],
+          children: [
+            chosenDatetime,
+            postTitle,
+            postDescription,
+            tagSelector,
+            submitButton,
+          ],
         ),
       ),
     );
