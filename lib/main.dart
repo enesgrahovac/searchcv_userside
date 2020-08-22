@@ -7,6 +7,7 @@ import 'PostTitle.dart';
 import 'DateTimeSelector.dart';
 import 'PostDescription.dart';
 import 'package:flutter_tags/flutter_tags.dart';
+import 'package:image_picker/image_picker.dart';
 
 void main() {
   runApp(MyApp());
@@ -67,6 +68,9 @@ class _MyHomePageState extends State<MyHomePage> {
   TextEditingController _postTitleController;
   TextEditingController _postDescriptionController;
 
+  final ImagePicker _picker = ImagePicker();
+  List _images;
+
   final _formKey = GlobalKey<FormState>();
 
   List<TextSpan> _googleizeName(name) {
@@ -126,6 +130,7 @@ class _MyHomePageState extends State<MyHomePage> {
     _tags = [];
     _chosenTags = [];
     _newTags = [];
+    _images = [];
     getTags();
     _now = DateTime.now();
     _postTitleController = TextEditingController();
@@ -197,6 +202,7 @@ class _MyHomePageState extends State<MyHomePage> {
         "description": _postDescriptionController.text,
         "title": _postTitleController.text,
         "tags": _chosenTags,
+        "images":_images,
       };
       sendPost(submitData);
 
@@ -212,6 +218,38 @@ class _MyHomePageState extends State<MyHomePage> {
   changeView() {
     print("change to post view");
   }
+
+  void _onImageButtonPressed() async {
+    // if (isVideo) {
+    //   final PickedFile file = await _picker.getVideo(
+    //       source: source, maxDuration: const Duration(seconds: 10));
+    //   await _playVideo(file);
+    // } else
+    // {
+    // await _displayPickImageDialog(context,
+    //     (double maxWidth, double maxHeight, int quality) async {
+    //   try {
+    final pickedFile = await _picker.getImage(
+      source: ImageSource.gallery,
+      // maxWidth: maxWidth,
+      // maxHeight: maxHeight,
+      // imageQuality: quality,
+    );
+    setState(() {
+      _images.add(pickedFile);
+      print(_images);
+      // _imageFile = pickedFile;
+    });
+    //   } catch (e) {
+    //     setState(() {
+    //       _pickImageError = e;
+    //     });
+    //   }
+    // });
+    // }
+  }
+
+  addImage() {}
 
   @override
   Widget build(BuildContext context) {
@@ -344,6 +382,10 @@ class _MyHomePageState extends State<MyHomePage> {
       ),
     );
 
+    Widget uploadImages = Container(
+        child: FlatButton(
+            onPressed: _onImageButtonPressed, child: Text("Upload Image")));
+
     Widget tagSelector = Tags(
       horizontalScroll: true,
       // key: _tagStateKey,
@@ -456,19 +498,24 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     color: Hexcolor(googleWhite),
                   ),
-                  child: Text("Switch View",style:TextStyle(fontSize: 10.0,color: Colors.black,))),
+                  child: Text("Switch View",
+                      style: TextStyle(
+                        fontSize: 10.0,
+                        color: Colors.black,
+                      ))),
             )
           ],
         ),
       ),
-      body: Form(
-        key: _formKey,
+      body: SingleChildScrollView(
+        // new line
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             chosenDatetime,
             postTitle,
             postDescription,
+            uploadImages,
             tagSelector,
             submitButton,
           ],
